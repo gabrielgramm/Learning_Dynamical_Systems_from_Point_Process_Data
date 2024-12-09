@@ -155,7 +155,7 @@ class VariationalInference(nn.Module):
     @no_grad_method
     def cal_posterior_PG(self):
         self.c_complete, self.c_complete_squared = pg_Helper.get_c_complete_posterior(self, self.time_grid)
-        self.c_n, self.c_n_squared = pg_Helper.get_posterior_c_n(self.c_complete, self.c_complete_squared, self.thinned_shifted_indices)
+        self.c_n, self.c_n_squared = pg_Helper.get_posterior_c_n(self.c_complete, self.c_complete_squared, self.thinned_process, self.thinned_shifted_indices)
         self.E_omega_N = pg_Helper.get_E_omega(self.c_n)
         self.E_omega_complete = pg_Helper.get_E_omega(self.c_complete)
         #return self.c_n, self.c_complete, self.E_omega_N, self.E_omega_complete

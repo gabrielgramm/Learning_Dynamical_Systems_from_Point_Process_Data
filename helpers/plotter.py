@@ -171,7 +171,7 @@ def plot_time_grid(ts_helper, time_grid, size, start=0, end=1500, show_sub_time_
 def plot_big_time_grid(ts_helper, time_grid, size, start=0, end=1500, tau_list=None, couplings=None, no_legend=False):
     if time_grid.shape[1] == 1: # for 1d phase space
         plt.figure(figsize=(size, size))
-        plt.title(r'x(t) in Phase Space', fontsize=11)
+        plt.title('x(t) in Phase Space', fontsize=11)
         if no_legend == False:
             if tau_list is not None and couplings is not None:
                 formatted_couplings = [[round(val.item(), 3) for val in row] for row in couplings]

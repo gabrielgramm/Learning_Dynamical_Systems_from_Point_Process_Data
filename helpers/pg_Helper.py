@@ -25,15 +25,18 @@ class pg_Helper:
         c_complete = torch.sqrt(second_momnet)
         return c_complete, c_complete_squared
 
-    def get_posterior_c_n(c_complete, c_complete_squared, thinned_shifted_indices):
+    def get_posterior_c_n(c_complete, c_complete_squared, thinned_process, thinned_shifted_indices):
         #sub_time_grid = vi.sub_time_grid
         #c_complete = vi.c_complete 
         #c_complete_squared = vi.c_complete_squared
         #thinned_shifted_indices = vi.thinned_shifted_indices
 
-        c_n = c_complete[thinned_shifted_indices]
-        c_n_squared = c_complete_squared[thinned_shifted_indices]
-        return c_n, c_n_squared
+        c_n = c_complete[thinned_shifted_indices]                  #old
+        c_n_squared = c_complete_squared[thinned_shifted_indices]  #old
+
+        c_n_marked = c_complete * thinned_process
+        c_n_marked_squared = c_complete_squared * thinned_process
+        return c_n_marked, c_n_marked_squared
 
     def get_pg_1_0(n):
         return torch.tensor(random_polyagamma(size=n))
@@ -42,9 +45,12 @@ class pg_Helper:
         return random_polyagamma(n, c)
     
     def get_E_omega(c_n):
-        if torch.any(c_n == 0):
-            raise ValueError("!!! c_n cannot be zero !!!")
-        E_omega_N = 1 / (2 * c_n)
-        E_omega_N *= torch.tanh(c_n / 2)
+        E_omega_N = torch.zeros(c_n.shape)
+        for i in range(len(c_n)):
+            if c_n[i] == 0:
+                continue
+            else:
+                E_omega_N[i] = 1 / (2 * c_n[i])
+                E_omega_N[i] *= torch.tanh(c_n[i] / 2)
         return E_omega_N
     
