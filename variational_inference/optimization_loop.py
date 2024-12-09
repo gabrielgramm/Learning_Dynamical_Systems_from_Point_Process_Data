@@ -20,7 +20,7 @@ def optimization_loop(i, list_full_processes, optimality_parameters, hyperparame
             global_full_stack_params.append(full_stack_params)
             hyperparam_time_tracker += h_time_tracker
             full_opt_time_tracker += opt_time_tracker
-            vi.plot_minimal(xlim=5000)
+            vi.plot_minimal(xlim=3000)
             print('\n')
     else:
         global_full_stack_params = []
@@ -32,7 +32,7 @@ def optimization_loop(i, list_full_processes, optimality_parameters, hyperparame
             global_full_stack_params.append(full_stack_params)
             hyperparam_time_tracker += h_time_tracker
             full_opt_time_tracker += opt_time_tracker
-            vi.plot_minimal(xlim=5000)
+            vi.plot_minimal(xlim=3000)
             print('\n')
     
     return list_vi_objects, loss_tracker_all_processes, global_full_stack_params, hyperparam_time_tracker, full_opt_time_tracker
