@@ -127,8 +127,8 @@ class Time_grid_optimizer2(nn.Module):
         #print("     tau_list:", [f"{x:.2f}" for x in self.tau_list])
         #print(f"     couplings: {self.couplings}")
         plot_time_grid(self.ts_helper, time_grid, size=5, start=800, end=6000, show_sub_time_grid=True, process=None)
-        print("the new taus are:", self.tau_list.cpu().numpy())
-        print("the new couplings are:", self.couplings.cpu().numpy())
+        print("   the new taus are:", self.tau_list.cpu().numpy())
+        print("   the new couplings are:", self.couplings.cpu().numpy())
         print("\n")
 
         self.time_grid_parameters['tau_list'] = self.tau_list.to('cpu')

@@ -11,13 +11,14 @@ class Generator:
     def generate_gp_prior(locations, n):
         locations = torch.tensor(locations[:, 0], dtype=torch.float64)  # Ensure locations is a PyTorch tensor
         gp = torch.zeros((n, locations.shape[0]))  # Initialize gp as a PyTorch tensor
+        unscaled = torch.zeros((n, locations.shape[0]))
 
         for i in range(n):
             kernel = gpytorch.kernels.ScaleKernel(gpytorch.kernels.RBFKernel())
 
         ############################################################
-            kernel.outputscale = 300.0
-            kernel.base_kernel.lengthscale = 6.
+            kernel.outputscale = 10.0
+            kernel.base_kernel.lengthscale = 4.0
         ############################################################
 
             with torch.no_grad():
@@ -28,8 +29,8 @@ class Generator:
             mean = torch.zeros(locations.shape[0])
             mvn = gpytorch.distributions.MultivariateNormal(mean, cov_matrix)
             samples = mvn.sample(sample_shape=torch.Size([1]))
-            samples -= torch.mean(samples)
-            samples -= 8
+            samples -= torch.mean(samples) 
+            samples -= 1
             samples = samples.reshape(1, -1)
             scaled_temp = torch.sigmoid(samples)     
             gp[i, :] = scaled_temp[0]
@@ -60,15 +61,21 @@ class Generator:
 
     ######### thinning ##########
 
-    def thinning_process(gp_sample, pois):
+    def thinning_process(gp_sample, pois, type):
         temp = np.zeros(pois.shape)
         sum = 0
         for j in range(pois.shape[1]):
             for i in range(0, pois.shape[0]):
                 if pois[i][j] == 1:
-                    if random.random() < gp_sample[i][j]:
-                        temp[i][j] = 1
-                        sum += 1
+                    if type == 'marked':
+                        if random.random() < gp_sample[i][j]:
+                            mark = np.random.poisson(gp_sample[i][j])
+                            temp[i][j] = mark
+                            sum += mark
+                    else:
+                        if random.random() < gp_sample[i][j]:
+                            temp[i][j] = 1
+                            sum += 1
         return temp, sum
 
 

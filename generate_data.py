@@ -9,7 +9,7 @@ poisson_rate = 0.5
 number_gp_samples = end_time * time_discretization
 
 Data_Generator = DataGenerator(number_gp_samples, end_time, number_of_processes,  poisson_rate, time_discretization,  mu_vdp=0.5)
-gp_samples, poisson_process, thinned_process, sum = Data_Generator.generate_data(type=marked)
+gp_samples, poisson_process, thinned_process, sum = Data_Generator.generate_marked_data(type='marked')
 
 data_dict = {
     'gp_samples': gp_samples,
