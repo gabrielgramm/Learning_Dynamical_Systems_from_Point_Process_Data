@@ -56,12 +56,12 @@ class Time_grid_optimizer2(nn.Module):
         tolerance_counter = 0
         tolerance_limit = 3
 
-        print(f"\n@@@@@@@@@@@@ time grid optimization ({self.epochs_time_grid} Epochs)  @@@@@@@@@@@@")
+        print(f"\n@@@@@@@@@@@@ time grid optimization ({self.epochs_time_grid} Epochs)  @@@@@@@@@@@@\n")
         #print("     @@ old tau and couplings: @@")
         #print("     tau_list:", [f"{x:.2f}" for x in self.tau_list])
         #print(f"     couplings: [{', '.join([str(list(row)) for row in self.couplings.numpy().round(2)])}]")
         #print(f"     couplings: {self.couplings}")
-        print("\n")
+        #print("\n")
 
         start_time=time.perf_counter()
         print_first_global_elbo = 0
@@ -127,9 +127,8 @@ class Time_grid_optimizer2(nn.Module):
         #print("     tau_list:", [f"{x:.2f}" for x in self.tau_list])
         #print(f"     couplings: {self.couplings}")
         plot_time_grid(self.ts_helper, time_grid, size=5, start=800, end=6000, show_sub_time_grid=True, process=None)
-        print("\n")
-        print("the new taus are:", self.tau_list)
-        print("the new couplings are:", self.couplings)
+        print("the new taus are:", self.tau_list.cpu().numpy())
+        print("the new couplings are:", self.couplings.cpu().numpy())
         print("\n")
 
         self.time_grid_parameters['tau_list'] = self.tau_list.to('cpu')

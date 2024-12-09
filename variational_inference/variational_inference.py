@@ -16,7 +16,6 @@ from ELBO.kl_Helper import Kullback_Leibler
 from time_series.ts_Helper import TS_Helper
 from ELBO.ELBO import ELBO
 from ELBO.ELBO import opt_ELBO
-from time_grid_optimization.time_grid_optimization import Time_grid_optimization
 from helpers.plotter import plot_results, plot_rates, plot_just_post_rate, plot_time_grid, plot_post_rate_minimal, plot_surface, plot_posterior_GP
 
 class VariationalInference(nn.Module):

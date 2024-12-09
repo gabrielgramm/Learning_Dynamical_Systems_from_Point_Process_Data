@@ -130,7 +130,7 @@ def plot_test_rates(list_vi_objects, key, start=0, xlim=2000, show_points=False)
 def plot_time_grid(ts_helper, time_grid, size, start=0, end=1500, show_sub_time_grid=False, process=0):
     if show_sub_time_grid == False:
         plt.figure(figsize=(size, size))
-        plt.title(r'$x(t)$ in Phase Space', fontsize=8)
+        plt.title(r'x(t) in Phase Space', fontsize=8)
         plt.plot(time_grid[start:end, 0], time_grid[start:end, 1], marker='o', color='black', linestyle=':', markersize=np.ceil(size/4), alpha=1)
         plt.tick_params(axis='both', labelsize=7)  
         plt.grid(True)
