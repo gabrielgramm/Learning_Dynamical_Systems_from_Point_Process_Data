@@ -77,7 +77,7 @@ class DataGenerator:
         return trajectory
     
     @no_grad_method
-    def generate_data(self):       
+    def generate_data(self, type=None):       
         sample_locations = self.get_sample_locations_lorenz()
         gp_samples = Generator.generate_gp_prior(sample_locations, self.number_of_processes)
         poisson_process, sum_lost_events = Generator.create_poisson_process(gp_samples, self.poisson_rate)
