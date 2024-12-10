@@ -25,7 +25,7 @@ class pg_Helper:
         c_complete = torch.sqrt(second_momnet)
         return c_complete, c_complete_squared
 
-    def get_posterior_c_n(c_complete, c_complete_squared, thinned_process, thinned_shifted_indices):
+    def get_posterior_c_n(c_complete, c_complete_squared, data, thinned_shifted_indices):
         #sub_time_grid = vi.sub_time_grid
         #c_complete = vi.c_complete 
         #c_complete_squared = vi.c_complete_squared
@@ -34,8 +34,9 @@ class pg_Helper:
         c_n = c_complete[thinned_shifted_indices]                  #old
         c_n_squared = c_complete_squared[thinned_shifted_indices]  #old
 
-        c_n_marked = c_complete * thinned_process
-        c_n_marked_squared = c_complete_squared * thinned_process
+        c_n_marked = c_complete * data
+        c_n_marked_squared = c_complete_squared * data
+        #return c_n, c_n_squared
         return c_n_marked, c_n_marked_squared
 
     def get_pg_1_0(n):
