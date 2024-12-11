@@ -1,0 +1,17 @@
+:::adapted function for marked point processes:::
+
+Analytical solutions::
+PG:
+- c_n and c_n_squared
+GP:
+- v_plus
+- sigma_s
+ELBO
+- z_plus
+- sum_ln_lmbda
+
+hyperparam tuning::
+- quadratic_term
+- lin_term
+- const_term
+- sum_ln_lmbda
