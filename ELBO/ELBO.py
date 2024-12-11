@@ -271,7 +271,9 @@ class ELBO:
         integrand = z_minus * marked_rate
         z_minus = torch.sum(integrand) / time_discretization
 
-        sum_ln_lmbda = E_ln_lmbda * sub_time_grid.shape[0]
+        #sum_ln_lmbda = E_ln_lmbda * sub_time_grid.shape[0]
+        sum_ln_lmbda = E_ln_lmbda * torch.sum(data)
+
         '''
         print("sum_ln_lmbda", sum_ln_lmbda)
         print("z plus", sum_z_plus)
