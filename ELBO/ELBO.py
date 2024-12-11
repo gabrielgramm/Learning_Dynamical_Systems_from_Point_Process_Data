@@ -144,7 +144,7 @@ class opt_ELBO:
         #cal sig_t_given_fs_sub
         if vi.kernel == 'RBF':
             #k_t_t = self.kernel_outputscale * torch.ones(sub_time_grid.shape[0], dtype=torch.float64)
-            k_t_t = self.positive_constraint.transform(self.raw_outputscale) * torch.ones(sub_time_grid.shape[0], dtype=torch.float64)
+            #k_t_t = self.positive_constraint.transform(self.raw_outputscale) * torch.ones(sub_time_grid.shape[0], dtype=torch.float64)
             k_t_t_full = self.positive_constraint.transform(self.raw_outputscale) * torch.ones(time_grid.shape[0], dtype=torch.float64)
         else:
             raise ValueError("Kernel not implemented")
@@ -219,6 +219,7 @@ class opt_ELBO:
 
         #sum_ln_lmbda = vi.E_ln_lmbda * sub_time_grid.shape[0]
         sum_ln_lmbda = vi.E_ln_lmbda * torch.sum(data)
+        
         L_E_U_s = sum_z_plus + sum_z_minus + sum_ln_lmbda
         
 

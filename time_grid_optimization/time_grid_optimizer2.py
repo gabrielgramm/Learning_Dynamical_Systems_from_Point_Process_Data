@@ -180,23 +180,6 @@ class Time_grid_optimizer2(nn.Module):
         conv = torch.cat((conv, add_zeros), dim=1)
         conv = conv[:, :data.shape[1]]
         return conv, sum_exp_function
-    
-    def convolve3(self, data_single, tau_list, kernel_effect_length, time_discretization):
-        conv = torch.zeros(tau_list.shape[0], data_single.shape[0], dtype=torch.float64)
-        for i in range(0, len(tau_list)):
-            temp_time_grid = torch.linspace(0, kernel_effect_length, kernel_effect_length * time_discretization)
-            time_grid_kernel = self.get_time_grid_kernel(temp_time_grid, tau_list[i])
-            kernel_tensor = time_grid_kernel.unsqueeze(0).unsqueeze(0).double()
-            kernel_tensor = kernel_tensor.flip(2)
-            padding = kernel_tensor.shape[2] - 1  # This will pad equally on both sides
-            x_tensor = data_single.clone().unsqueeze(0).unsqueeze(0).double()  # Shape: (num_processes, 1, len(x))
-            x_padded = F.pad(x_tensor, (padding, padding))
-            _1dconv = F.conv1d(x_padded, kernel_tensor)
-            temp = _1dconv.squeeze()
-            temp = torch.cat((temp, torch.zeros(1)), dim=0)
-            conv[i] = temp[:data_single.shape[0]]
-        print("conv shape:",conv.shape)
-        return conv
 
     ######## We cal negative ELBO and do descent instead of ascent ########
 
@@ -211,14 +194,7 @@ class Time_grid_optimizer2(nn.Module):
         tau_list = self.positive_constraint.transform(self.raw_tau_list)
 
         time_grid_old = torch.zeros(self.ts_helper.data.shape[1], self.ts_helper.dim_phase_space, dtype=torch.float64, device=self.device)
-        '''time_grid = torch.zeros(self.ts_helper.dim_phase_space, self.ts_helper.data.shape[1], dtype=torch.float64)
 
-        for axis in range(0, self.ts_helper.num_processes):
-            convolved, s = self.convolve(self.ts_helper.data, tau_list[axis], self.ts_helper.kernel_effect_length, self.ts_helper.time_discretization)
-            scaled_conv = torch.matmul(self.opt_couplings[:, axis], convolved)
-            time_grid[axis] = scaled_conv
-        time_grid = time_grid.transpose(1, 0)'''
-        
         for axis in range(0, self.ts_helper.dim_phase_space):
             convolved, sum_exp_function = self.convolve(self.ts_helper.data, tau_list[axis], self.ts_helper.kernel_effect_length, self.ts_helper.time_discretization)
             scaled_coupling = self.opt_couplings[:, axis] #/ (sum_exp_function / self.ts_helper.time_discretization)
@@ -236,6 +212,9 @@ class Time_grid_optimizer2(nn.Module):
 
             ### time gird is not float 64 ###
             #plot_time_grid(self.ts_helper, time_grid.detach(), size=4, show_sub_time_grid=True)
+
+            data = torch.roll(vi.thinned_process, shifts=-1).to(self.device)
+            data[-1] = 0
             
             mu_0_sub = vi.GP_prior_mean * torch.ones(sub_time_grid.shape[0], dtype=torch.float64, device=self.device)
             mu_0_extended = vi.GP_prior_mean * torch.ones(time_grid.shape[0], dtype=torch.float64, device=self.device)
@@ -284,52 +263,68 @@ class Time_grid_optimizer2(nn.Module):
             kappa_b_sub = torch.transpose(kappa_f_sub, 0, 1)
 
 
-            ### &&&&& z_plus &&&&& ###
+            ''' &&&&& z_plus &&&&& '''
             #cal quadratic term
             sec_mom = vi.SGP_post_cov + torch.ger(vi.SGP_post_mean, vi.SGP_post_mean)
-            quadratic_term_plus = torch.sum((torch.matmul(kappa_f_sub, sec_mom)) * (kappa_b_sub.transpose(0,1)), dim=1)
-            quadratic_term_plus = quadratic_term_plus * vi.E_omega_N
+            #quadratic_term_plus = torch.sum((torch.matmul(kappa_f_sub, sec_mom)) * (kappa_b_sub.transpose(0,1)), dim=1)
+            quadratic_term_plus = torch.sum((torch.matmul(kappa_f_full, sec_mom)) * (kappa_b_full.transpose(0,1)), dim=1)
+            quadratic_term_plus *= vi.E_omega_N
+            quadratic_term_plus *= data
 
             #cal linear term
             test = torch.matmul(kappa_f_sub, vi.SGP_post_mean)
-            mu_s_0_kappa_sub = torch.matmul(mu_s_0, kappa_b_sub)
-            lin_term_plus = mu_0_sub - mu_s_0_kappa_sub
+            #mu_s_0_kappa_sub = torch.matmul(mu_s_0, kappa_b_sub)
+            #lin_term_plus = mu_0_sub - mu_s_0_kappa_sub
+            mu_s_0_kappa_full = torch.matmul(mu_s_0, kappa_b_full)
+            lin_term_plus = mu_0_extended - mu_s_0_kappa_full
             lin_term_plus = lin_term_plus * vi.E_omega_N
             lin_term_plus = 0.5 - lin_term_plus
-            temp2 = torch.matmul(kappa_f_sub, vi.SGP_post_mean)
-            lin_term_plus = lin_term_plus* temp2
+            #temp2 = torch.matmul(kappa_f_sub, vi.SGP_post_mean)
+            temp2 = torch.matmul(kappa_f_full, vi.SGP_post_mean)
+            lin_term_plus *= temp2
+            lin_term_plus *= data
 
             #cal sig_t_given_fs_sub
             if vi.kernel == 'RBF':
-                k_t_t = vi.kernel_outputscale * torch.ones(sub_time_grid.shape[0], dtype=torch.float64, device=self.device)# * sub_time_grid[:,0] #this was a test
+                #k_t_t = vi.kernel_outputscale * torch.ones(sub_time_grid.shape[0], dtype=torch.float64, device=self.device)# * sub_time_grid[:,0] #this was a test
+                k_t_t_full = vi.kernel_outputscale * torch.ones(time_grid.shape[0], dtype=torch.float64, device=self.device)
             else:
                 raise ValueError("Kernel not implemented")
-            sigma_t_given_fs_sub = k_t_t - torch.sum(kappa_f_sub * k_x_t__x_s_sub, dim=1)
-
+            #sigma_t_given_fs_sub = k_t_t - torch.sum(kappa_f_sub * k_x_t__x_s_sub, dim=1)
+            sigma_t_given_fs_full = k_t_t_full - torch.sum(kappa_f_full * k_x_t__x_s_full, dim=1)
+            '''
             #cal bracket_term
             bracket_term = (sigma_t_given_fs_sub 
                         + torch.pow(mu_0_sub, 2) 
                         - 2 * mu_0_sub * mu_s_0_kappa_sub 
                         + torch.pow(mu_s_0_kappa_sub, 2))
-            
-            '''print("\n")
-            print(sum(sigma_t_given_fs_sub))
-            print(sum(torch.pow(mu_0_sub, 2)))
-            print(sum(2 * mu_0_sub * mu_s_0_kappa_sub))
-            print(sum(torch.pow(mu_s_0_kappa_sub, 2)))
-            print("\n")'''
+
 
             #cal constant term
             const_term_plus = (0.5 * mu_0_sub 
                         - 0.5 * mu_s_0_kappa_sub 
                         - bracket_term * 0.5 * vi.E_omega_N 
                         - torch.log(torch.tensor(2.0, device=self.device)))
+            '''
+                        #cal bracket_term
+            bracket_term = (sigma_t_given_fs_full 
+                        + torch.pow(mu_0_extended, 2) 
+                        - 2 * mu_0_extended * mu_s_0_kappa_full 
+                        + torch.pow(mu_s_0_kappa_full, 2))
+
+
+            #cal constant term
+            const_term_plus = (0.5 * mu_0_extended 
+                        - 0.5 * mu_s_0_kappa_full 
+                        - bracket_term * 0.5 * vi.E_omega_N 
+                        - torch.log(torch.tensor(2.0, device=self.device)))
+            const_term_plus *= data
 
             z_plus = - 0.5 * quadratic_term_plus + lin_term_plus + const_term_plus
             sum_z_plus = torch.sum(z_plus)
 
 
-            ### &&&&& z_minus &&&&& ###
+            ''' &&&&& z_minus &&&&& '''
             #cal quadratic term
             sec_mom = vi.SGP_post_cov + torch.ger(vi.SGP_post_mean, vi.SGP_post_mean)
             quadratic_term_minus = torch.sum((torch.matmul(kappa_f_full, sec_mom)) * (kappa_f_full), dim=1)
@@ -366,7 +361,10 @@ class Time_grid_optimizer2(nn.Module):
             pre_z_minus = - 0.5 * quadratic_term_minus + lin_term_minus + const_term_minus
             z_minus = pre_z_minus * vi.marked_process_intensity_t
             sum_z_minus = torch.sum(z_minus) / self.ts_helper.time_discretization
-            sum_ln_lmbda = vi.E_ln_lmbda * sub_time_grid.shape[0]
+
+            #sum_ln_lmbda = vi.E_ln_lmbda * sub_time_grid.shape[0]
+            sum_ln_lmbda = vi.E_ln_lmbda * torch.sum(data)
+
             L_E_U_s = sum_z_plus + sum_z_minus + sum_ln_lmbda            
             
             ### &&&&& PG kl divergence &&&&& ###
