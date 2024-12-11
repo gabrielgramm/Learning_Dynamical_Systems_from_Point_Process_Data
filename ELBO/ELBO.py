@@ -7,7 +7,7 @@ from helpers.kernel_Helper import KernelHelper
 from helpers.gp_Helper import GP_Helper
 from helpers.helpers import Helper
 from helpers.helpers import no_grad_method
-from ELBO.ELBO_helper import get_z_plus, get_z_minus
+from ELBO.ELBO_helper import get_z_plus, get_z_minus, get_z_plus_marked
 from time_series.ts_Helper import TS_Helper
 
 class opt_ELBO:
@@ -260,11 +260,14 @@ class ELBO:
         cov_s = vi.SGP_post_cov
         E_ln_lmbda = vi.E_ln_lmbda
         marked_rate = vi.marked_process_intensity_t
+        data = torch.roll(vi.thinned_process, shifts=-1)
+        data[-1] = 0
 
-        z_plus = get_z_plus(vi, sub_time_grid, inducing_points_s, E_omega_N, E_fs, cov_s,  mu_0, mu_s_0)
+        #z_plus = get_z_plus(vi, sub_time_grid, inducing_points_s, E_omega_N, E_fs, cov_s,  mu_0, mu_s_0)
+        z_plus_marked = get_z_plus_marked(vi, time_grid, inducing_points_s, data, E_omega_N, E_fs, cov_s,  mu_0_extended, mu_s_0)
         z_minus = get_z_minus(vi, time_grid, inducing_points_s, E_omega_complete, E_fs, cov_s,  mu_0_extended, mu_s_0)
 
-        sum_z_plus = torch.sum(z_plus, dim=0)
+        sum_z_plus = torch.sum(z_plus_marked, dim=0)
         integrand = z_minus * marked_rate
         z_minus = torch.sum(integrand) / time_discretization
 

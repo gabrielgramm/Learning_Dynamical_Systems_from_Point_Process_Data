@@ -199,6 +199,23 @@ class KernelHelper:
         z *= temp
         return z
     
+    def get_linear_term_z_marked(self, time_grid, inducing_points_s, data, E_omega, E_fs, mu_s_0, mu_0, z_plus):
+        # mu * kappa backward
+        #mu_0_extended = torch.full((time_grid.shape[0],), mu_0[0], dtype=torch.float64)
+        z = torch.matmul(mu_s_0, self.get_kappa_backward(time_grid, inducing_points_s))
+        z = mu_0 - z
+        z *= E_omega
+        one_half = torch.full((time_grid.shape[0],), 0.5)
+        if z_plus == True:
+            z = one_half - z
+            z *= data
+        else:
+            z = -one_half - z
+        # instead of z times kappa forward, we do first kappa forward times fs
+        temp = torch.matmul(self.get_kappa_forward(time_grid, inducing_points_s), E_fs)
+        z *= temp
+        return z
+    
     def get_bracket_term_of_const(self, time_grid, inducing_points_s, mu_s_0, mu_0, sig_t_given_fs):
         #mu_extended = torch.full((time_grid.shape[0],), mu_0[0], dtype=torch.float64)
         z = sig_t_given_fs + torch.pow(mu_0,2)

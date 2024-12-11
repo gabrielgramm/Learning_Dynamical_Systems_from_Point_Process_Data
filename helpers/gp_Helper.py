@@ -18,7 +18,6 @@ class GP_Helper():
         marked_rate = vi.marked_process_intensity_t
         data = torch.roll(vi.thinned_process, shifts=-1)
         data[-1] = 0
-        #data = vi.thinned_process
 
         #v_plus = vi.kernel_helper.get_linear_term_v(sub_time_grid, inducing_points_s, E_omega_N,  mu_s_0, mu_0, marked_rate, v_plus=True)
         #v_minus = vi.kernel_helper.get_linear_term_v(time_grid, inducing_points_s, E_omega_complete,  mu_s_0, mu_0_extended, marked_rate, v_plus=False)
