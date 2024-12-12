@@ -258,7 +258,7 @@ class opt_ELBO:
         ''' &&&&& ELBO &&&&& '''
         L =  L_E_U_s - kl_lmbda - kl_PG - kl_MP - kl_GP  
         
-        print("\n")
+        '''print("\n")
         print("sum_ln_lmbda", sum_ln_lmbda)
         print("z plus", sum_z_plus)
         print("z minus", sum_z_minus)
@@ -268,7 +268,7 @@ class opt_ELBO:
         print("kl_MP", kl_MP)
         print("kl_GP", kl_GP)
         print("L", - L)
-        print("\n")
+        print("\n")'''
 
         return L
     
