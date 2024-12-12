@@ -34,8 +34,10 @@ class pg_Helper:
         c_n = c_complete[thinned_shifted_indices]                  #old
         c_n_squared = c_complete_squared[thinned_shifted_indices]  #old
 
-        c_n_marked = c_complete * data
-        c_n_marked_squared = c_complete_squared * data
+        choose = torch.where(data == 0, torch.tensor(0), torch.tensor(1))
+
+        c_n_marked = c_complete * choose
+        c_n_marked_squared = c_complete_squared * choose
         #return c_n, c_n_squared
         return c_n_marked, c_n_marked_squared
 
