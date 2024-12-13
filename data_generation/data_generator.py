@@ -128,11 +128,13 @@ class DataGenerator:
 
         fig, axs = plt.subplots(gp_samples.shape[0], 1, figsize=(8, gp_samples.shape[0] * 1))
         for i in range(gp_samples.shape[0]):
-            non_zero_indices = [x for x, value in enumerate(thinned_process[i]) if value != 0]
-            non_zero_values = [value for value in thinned_process[i] if value != 0]
             ax = axs[i]  # Select the current axis
             ax.plot(gp_samples[i], color='black', linewidth=.5)  # Plot the true rate
+            non_zero_indices = [x for x, value in enumerate(thinned_process[i]) if value != 0]
+            non_zero_values = [value for value in thinned_process[i] if value != 0]
             ax.scatter(non_zero_indices, non_zero_values, color='black', alpha=.5, zorder=5, s=2)
+            for idx, val in zip(non_zero_indices, non_zero_values):
+                ax.vlines(x=idx, ymin=0, ymax=val, color='gray', alpha=0.5, linestyle='dotted', zorder=4)
             #ax.plot(np.arange(0,thinned_process[i].shape), thinned_process[i], marker=".", alpha=.5,color='black', s=2)
             ax.tick_params(axis='both', labelsize=7)  # Set tick label size
             ax.set_xlim(0, xlim)  # Set x-axis limit
