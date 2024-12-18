@@ -199,6 +199,23 @@ class KernelHelper:
         z *= temp
         return z
     
+    def get_linear_term_z_marked(self, time_grid, inducing_points_s, data, E_omega, E_fs, mu_s_0, mu_0, z_plus):
+        # mu * kappa backward
+        #mu_0_extended = torch.full((time_grid.shape[0],), mu_0[0], dtype=torch.float64)
+        z = torch.matmul(mu_s_0, self.get_kappa_backward(time_grid, inducing_points_s))
+        z = mu_0 - z
+        z *= E_omega
+        one_half = torch.full((time_grid.shape[0],), 0.5)
+        if z_plus == True:
+            z = one_half - z
+            z *= data
+        else:
+            z = -one_half - z
+        # instead of z times kappa forward, we do first kappa forward times fs
+        temp = torch.matmul(self.get_kappa_forward(time_grid, inducing_points_s), E_fs)
+        z *= temp
+        return z
+    
     def get_bracket_term_of_const(self, time_grid, inducing_points_s, mu_s_0, mu_0, sig_t_given_fs):
         #mu_extended = torch.full((time_grid.shape[0],), mu_0[0], dtype=torch.float64)
         z = sig_t_given_fs + torch.pow(mu_0,2)
@@ -261,6 +278,14 @@ class KernelHelper:
         temp = E_omega_N.t() * kappa_b
         sigma_s = torch.matmul(temp, kappa_f)
         return sigma_s
+    
+    def get_sigma_s_marked(self, time_gird, inducing_points_s, E_omega_N, data):
+        kappa_b = self.get_kappa_backward(time_gird, inducing_points_s)
+        kappa_f = self.get_kappa_forward(time_gird, inducing_points_s)
+        test2 = E_omega_N.t() * data
+        temp = test2 * kappa_b
+        sigma_s = torch.matmul(temp, kappa_f)
+        return sigma_s
 
     def get_sigma_s_complete(self, time_grid, inducing_points_s, E_omega_complete, marked_rate):
         kappa_b = self.get_kappa_backward(time_grid, inducing_points_s)
@@ -279,6 +304,23 @@ class KernelHelper:
         if v_plus == True:
             y = one_half - v
             v = torch.matmul(y, self.get_kappa_forward(time_grid, inducing_points_s))
+            return v
+        else:
+            y = -one_half - v
+            v = y * marked_rate
+            v = torch.matmul(v, self.get_kappa_forward(time_grid, inducing_points_s))
+            return v
+
+    def get_linear_term_v_marked(self, time_grid, inducing_points_s, E_omega, mu_s_0, mu_0, data, marked_rate, v_plus):
+        # mu * kappa backward
+        x = torch.matmul(mu_s_0, self.get_kappa_backward(time_grid, inducing_points_s))
+        v = mu_0 - x
+        v *= E_omega
+        one_half = torch.full((time_grid.shape[0],), 0.5)
+        if v_plus == True:
+            y = one_half - v
+            v = y * data
+            v = torch.matmul(v, self.get_kappa_forward(time_grid, inducing_points_s))
             return v
         else:
             y = -one_half - v

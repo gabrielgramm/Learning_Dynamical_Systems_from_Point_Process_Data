@@ -26,8 +26,11 @@ def plot_results(vi, gp_sample, posterior_rate, E_f_full_domain, full_E_f_full_d
     plt.figure(figsize=(12, 1.5))
     plt.plot(gp_sample,'black')
     plt.plot(posterior_rate, color='#008080', linewidth=2)
-    thinned_shifted_indices = vi.thinned_shifted_indices[vi.thinned_shifted_indices < xlim]
-    plt.scatter(thinned_shifted_indices, np.zeros(len(thinned_shifted_indices)), s=8, alpha=0.5, color='black')
+    non_zero_indices = [x for x, value in enumerate(vi.thinned_process) if value != 0]
+    non_zero_values = [value for value in vi.thinned_process if value != 0]
+    plt.scatter(non_zero_indices, non_zero_values, color='black', alpha=.5, zorder=5, s=4)
+    for idx, val in zip(non_zero_indices, non_zero_values):
+        plt.vlines(x=idx, ymin=0, ymax=val, color='gray', alpha=0.5, linestyle='-', zorder=4)
     #plt.title('fitted Rate Process 1', fontsize=9)
     plt.tick_params(axis='both', labelsize=8)
     plt.xlim(start, xlim)
@@ -171,7 +174,7 @@ def plot_time_grid(ts_helper, time_grid, size, start=0, end=1500, show_sub_time_
 def plot_big_time_grid(ts_helper, time_grid, size, start=0, end=1500, tau_list=None, couplings=None, no_legend=False):
     if time_grid.shape[1] == 1: # for 1d phase space
         plt.figure(figsize=(size, size))
-        plt.title(r'x(t) in Phase Space', fontsize=11)
+        plt.title('x(t) in Phase Space', fontsize=11)
         if no_legend == False:
             if tau_list is not None and couplings is not None:
                 formatted_couplings = [[round(val.item(), 3) for val in row] for row in couplings]
@@ -310,8 +313,11 @@ def plot_post_rate_minimal(vi, start=0, xlim=1500):
     posterior_rate = vi.posterior_rate.detach().numpy()
     plt.figure(figsize=(8, 1))
     plt.plot(posterior_rate, color='black',  linewidth=0.7)
-    thinned_shifted_indices = vi.thinned_shifted_indices[vi.thinned_shifted_indices < xlim]
-    plt.scatter(thinned_shifted_indices, np.zeros(len(thinned_shifted_indices)), s=2, alpha=0.5, color='black')
+    #thinned_shifted_indices = vi.thinned_shifted_indices[vi.thinned_shifted_indices < xlim]
+    #plt.scatter(thinned_shifted_indices, np.zeros(len(thinned_shifted_indices)), s=2, alpha=0.5, color='black')
+    non_zero_indices = [x for x, value in enumerate(vi.thinned_process) if value != 0]
+    non_zero_values = [value for value in vi.thinned_process if value != 0]
+    plt.scatter(non_zero_indices, non_zero_values, color='black', alpha=.5, zorder=5, s=2)
     #plt.title(f'posterior_rate', fontsize=8) 
     plt.tick_params(axis='both', labelsize=7)
     plt.xlim(start, xlim)

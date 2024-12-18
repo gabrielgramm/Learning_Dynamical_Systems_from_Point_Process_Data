@@ -80,13 +80,13 @@ class Helper:
     def get_indices(poisson):
         indices = []
         for i in range(0, poisson.shape[0]):
-            temp_ind = np.where(poisson[i,:] == 1)
+            temp_ind = np.where(poisson[i,:] != 0)
             temp_ind = list(temp_ind)
             indices.append(temp_ind[0][:])
         return indices
     
     def get_indices_1d(array):
-        indices = [index for index, value in enumerate(array) if value == 1]
+        indices = [index for index, value in enumerate(array) if value != 0]
         return torch.tensor(indices)
     
     def shift_indices(thinned_indices):

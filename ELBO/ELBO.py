@@ -7,7 +7,7 @@ from helpers.kernel_Helper import KernelHelper
 from helpers.gp_Helper import GP_Helper
 from helpers.helpers import Helper
 from helpers.helpers import no_grad_method
-from ELBO.ELBO_helper import get_z_plus, get_z_minus
+from ELBO.ELBO_helper import get_z_plus, get_z_minus, get_z_plus_marked
 from time_series.ts_Helper import TS_Helper
 
 class opt_ELBO:
@@ -78,6 +78,9 @@ class opt_ELBO:
 
         alpha_0 = self.positive_constraint.transform(self.raw_alpha_0)
         beta_0 = self.positive_constraint.transform(self.raw_beta_0)
+
+        data = torch.roll(vi.thinned_process, shifts=-1)
+        data[-1] = 0
         
         #kernel initialization     
         if vi.kernel == 'RBF':
@@ -119,25 +122,36 @@ class opt_ELBO:
         ''' &&&&& z_plus &&&&& '''
         #cal quadratic term
         sec_mom = vi.SGP_post_cov + torch.ger(vi.SGP_post_mean, vi.SGP_post_mean)
-        quadratic_term = torch.sum((torch.matmul(kappa_f_sub, sec_mom)) * (kappa_b_sub.transpose(0,1)), dim=1)
-        quadratic_term *= vi.E_omega_N  
+        #quadratic_term = torch.sum((torch.matmul(kappa_f_sub, sec_mom)) * (kappa_b_sub.transpose(0,1)), dim=1)
+        #quadratic_term *= vi.E_omega_N
+
+        quadratic_term = torch.sum((torch.matmul(kappa_f_full, sec_mom)) * (kappa_b_full.transpose(0,1)), dim=1)
+        quadratic_term *= vi.E_omega_N 
+        quadratic_term *= data
 
         #cal linear term
-        mu_s_0_kappa_sub = torch.matmul(mu_s_0, kappa_b_sub)
-        lin_term_plus = mu_0_sub - mu_s_0_kappa_sub
+        #mu_s_0_kappa_sub = torch.matmul(mu_s_0, kappa_b_sub)
+        #lin_term_plus = mu_0_sub - mu_s_0_kappa_sub
+        mu_s_0_kappa_full = torch.matmul(mu_s_0, kappa_b_full)
+        lin_term_plus = mu_0_extended - mu_s_0_kappa_full
         lin_term_plus *= vi.E_omega_N
         lin_term_plus = 0.5 - lin_term_plus
-        temp2 = torch.matmul(kappa_f_sub, vi.SGP_post_mean)
+        #temp2 = torch.matmul(kappa_f_sub, vi.SGP_post_mean)
+        temp2 = torch.matmul(kappa_f_full, vi.SGP_post_mean)
         lin_term_plus *= temp2
+        lin_term_plus *= data
 
         #cal sig_t_given_fs_sub
         if vi.kernel == 'RBF':
             #k_t_t = self.kernel_outputscale * torch.ones(sub_time_grid.shape[0], dtype=torch.float64)
-            k_t_t = self.positive_constraint.transform(self.raw_outputscale) * torch.ones(sub_time_grid.shape[0], dtype=torch.float64)
+            #k_t_t = self.positive_constraint.transform(self.raw_outputscale) * torch.ones(sub_time_grid.shape[0], dtype=torch.float64)
+            k_t_t_full = self.positive_constraint.transform(self.raw_outputscale) * torch.ones(time_grid.shape[0], dtype=torch.float64)
         else:
             raise ValueError("Kernel not implemented")
-        sigma_t_given_fs_sub = k_t_t - torch.sum(kappa_f_sub * k_x_t__x_s_sub, dim=1)
-
+        
+        #sigma_t_given_fs_sub = k_t_t - torch.sum(kappa_f_sub * k_x_t__x_s_sub, dim=1)
+        sigma_t_given_fs_full = k_t_t_full - torch.sum(kappa_f_full * k_x_t__x_s_full, dim=1)
+        '''
         #cal bracket_term
         bracket_term = sigma_t_given_fs_sub + torch.pow(mu_0_sub, 2)
         bracket_term -= 2 * mu_0_sub * mu_s_0_kappa_sub
@@ -148,6 +162,18 @@ class opt_ELBO:
         const_term -= 0.5 * mu_s_0_kappa_sub
         const_term -= bracket_term * 0.5 * vi.E_omega_N
         const_term -= torch.log(torch.tensor(2.0))
+        '''
+        #cal bracket_term
+        bracket_term = sigma_t_given_fs_full + torch.pow(mu_0_extended, 2)
+        bracket_term -= 2 * mu_0_extended * mu_s_0_kappa_full
+        bracket_term += torch.pow(mu_s_0_kappa_full, 2)
+
+        #cal constant term
+        const_term = 0.5 * mu_0_extended
+        const_term -= 0.5 * mu_s_0_kappa_full
+        const_term -= bracket_term * 0.5 * vi.E_omega_N
+        const_term -= torch.log(torch.tensor(2.0))
+        const_term *= data
 
         z_plus = - 0.5 * quadratic_term + lin_term_plus + const_term
         sum_z_plus = torch.sum(z_plus)
@@ -190,7 +216,10 @@ class opt_ELBO:
         z_minus = - 0.5 * quadratic_term + lin_term_minus + const_term_minus
         z_minus *= vi.marked_process_intensity_t
         sum_z_minus = torch.sum(z_minus) / vi.time_discretization
-        sum_ln_lmbda = vi.E_ln_lmbda * sub_time_grid.shape[0]
+
+        #sum_ln_lmbda = vi.E_ln_lmbda * sub_time_grid.shape[0]
+        sum_ln_lmbda = vi.E_ln_lmbda * torch.sum(data)
+        
         L_E_U_s = sum_z_plus + sum_z_minus + sum_ln_lmbda
         
 
@@ -260,15 +289,21 @@ class ELBO:
         cov_s = vi.SGP_post_cov
         E_ln_lmbda = vi.E_ln_lmbda
         marked_rate = vi.marked_process_intensity_t
+        data = torch.roll(vi.thinned_process, shifts=-1)
+        data[-1] = 0
 
-        z_plus = get_z_plus(vi, sub_time_grid, inducing_points_s, E_omega_N, E_fs, cov_s,  mu_0, mu_s_0)
+        #z_plus = get_z_plus(vi, sub_time_grid, inducing_points_s, E_omega_N, E_fs, cov_s,  mu_0, mu_s_0)
+        #sum_z_plus = torch.sum(z_plus, dim=0)
+        z_plus_marked = get_z_plus_marked(vi, time_grid, inducing_points_s, data, E_omega_N, E_fs, cov_s,  mu_0_extended, mu_s_0)
+        sum_z_plus = torch.sum(z_plus_marked, dim=0)
         z_minus = get_z_minus(vi, time_grid, inducing_points_s, E_omega_complete, E_fs, cov_s,  mu_0_extended, mu_s_0)
 
-        sum_z_plus = torch.sum(z_plus, dim=0)
         integrand = z_minus * marked_rate
         z_minus = torch.sum(integrand) / time_discretization
 
-        sum_ln_lmbda = E_ln_lmbda * sub_time_grid.shape[0]
+        #sum_ln_lmbda = E_ln_lmbda * sub_time_grid.shape[0]
+        sum_ln_lmbda = E_ln_lmbda * torch.sum(data)
+
         '''
         print("sum_ln_lmbda", sum_ln_lmbda)
         print("z plus", sum_z_plus)

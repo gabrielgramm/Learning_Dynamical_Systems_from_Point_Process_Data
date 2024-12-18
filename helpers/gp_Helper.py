@@ -16,13 +16,18 @@ class GP_Helper():
         E_omega_complete = vi.E_omega_complete
         E_omega_N = vi.E_omega_N
         marked_rate = vi.marked_process_intensity_t
+        data = torch.roll(vi.thinned_process, shifts=-1)
+        data[-1] = 0
 
-        v_plus = vi.kernel_helper.get_linear_term_v(sub_time_grid, inducing_points_s, E_omega_N,  mu_s_0, mu_0, marked_rate, v_plus=True)
-        v_minus = vi.kernel_helper.get_linear_term_v(time_grid, inducing_points_s, E_omega_complete,  mu_s_0, mu_0_extended, marked_rate, v_plus=False)
+        #v_plus = vi.kernel_helper.get_linear_term_v(sub_time_grid, inducing_points_s, E_omega_N,  mu_s_0, mu_0, marked_rate, v_plus=True)
+        #v_minus = vi.kernel_helper.get_linear_term_v(time_grid, inducing_points_s, E_omega_complete,  mu_s_0, mu_0_extended, marked_rate, v_plus=False)
+        v_plus = vi.kernel_helper.get_linear_term_v_marked(time_grid, inducing_points_s, E_omega_N,  mu_s_0, mu_0_extended, data, marked_rate, v_plus=True)
+        v_minus = vi.kernel_helper.get_linear_term_v_marked(time_grid, inducing_points_s, E_omega_complete,  mu_s_0, mu_0_extended, data, marked_rate, v_plus=False)
         v_minus /= time_discretization
         v_s = v_plus + v_minus
 
-        sigma_s = vi.kernel_helper.get_sigma_s(sub_time_grid, inducing_points_s, E_omega_N)
+        #sigma_s = vi.kernel_helper.get_sigma_s(sub_time_grid, inducing_points_s, E_omega_N)
+        sigma_s = vi.kernel_helper.get_sigma_s_marked(time_grid, inducing_points_s, E_omega_N, data)
         sigma_s_complete = vi.kernel_helper.get_sigma_s_complete(time_grid, inducing_points_s, E_omega_complete, marked_rate)
         sigma_s_complete /= time_discretization
         bar_sigma_s = sigma_s + sigma_s_complete

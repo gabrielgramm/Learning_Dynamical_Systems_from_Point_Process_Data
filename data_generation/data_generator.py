@@ -78,10 +78,10 @@ class DataGenerator:
     
     @no_grad_method
     def generate_data(self, type=None):       
-        sample_locations = self.get_sample_locations_lorenz()
+        sample_locations = self.get_sample_locations_2d()
         gp_samples = Generator.generate_gp_prior(sample_locations, self.number_of_processes)
         poisson_process, sum_lost_events = Generator.create_poisson_process(gp_samples, self.poisson_rate)
-        thinned_process, sum = Generator.thinning_process(gp_samples, poisson_process)
+        thinned_process, sum = Generator.thinning_process(gp_samples, poisson_process, type)
 
         #scaling by lambda_bar
         for i in range(gp_samples.shape[0]):
@@ -91,20 +91,11 @@ class DataGenerator:
         return gp_samples, poisson_process, thinned_process, sum
     
     @no_grad_method
-    def generate_data_2(self):       
-        sample_locations = self.get_sample_locations_2d()
-        gp_samples = Generator.generate_gp_prior(sample_locations, self.number_of_processes)
-        timestamps = Generator.create_poisson_timestamps(self.number_of_processes, self.poisson_rate, self.end_time)
-        interpolated = self.interpolate_gp_samples(gp_samples)
-        thinned_process, sum = Generator.thinning_process(gp_samples, interpolated)
-        return timestamps, gp_samples, thinned_process
-    
-    @no_grad_method
-    def generate_data_3(self):  
+    def generate_marked_data(self, type='marked'):   
         sample_locations = self.get_sample_locations_2d()
         gp_samples = Generator.generate_gp_prior(sample_locations, self.number_of_processes)
         poisson_process, sum_lost_events = Generator.create_poisson_process(gp_samples, self.poisson_rate)
-        thinned_process, sum = Generator.thinning_process(gp_samples, poisson_process)
+        thinned_process, sum = Generator.thinning_process(gp_samples, poisson_process, type)
 
         #scaling by lambda_bar
         for i in range(gp_samples.shape[0]):
@@ -121,6 +112,34 @@ class DataGenerator:
               "\n  num_timesteps: ", gp_samples.shape[1],
               "\n sum_of_first_poisson_process: ", poisson_process[0].sum(),
               "\n sum_of_first_thinned_process: ", thinned_process[0].sum())
+        
+    @no_grad_method
+    def plot_marked_data(gp_samples, poisson_process, thinned_process, xlim=1000):
+        '''
+        thinned_indices = []
+        for i in range(thinned_process.shape[0]):
+            indices = Helper.get_indices_1d(thinned_process[i])
+            shifted_indices = Helper.shift_indices(indices)
+            thinned_indices.append(shifted_indices)
+        '''
+        
+        if gp_samples.shape[0] == 1:
+            axs = [axs]
+
+        fig, axs = plt.subplots(gp_samples.shape[0], 1, figsize=(8, gp_samples.shape[0] * 1))
+        for i in range(gp_samples.shape[0]):
+            ax = axs[i]  # Select the current axis
+            ax.plot(gp_samples[i], color='black', linewidth=.5)  # Plot the true rate
+            non_zero_indices = [x for x, value in enumerate(thinned_process[i]) if value != 0]
+            non_zero_values = [value for value in thinned_process[i] if value != 0]
+            ax.scatter(non_zero_indices, non_zero_values, color='black', alpha=.5, zorder=5, s=2)
+            for idx, val in zip(non_zero_indices, non_zero_values):
+                ax.vlines(x=idx, ymin=0, ymax=val, color='gray', alpha=0.5, linestyle='dotted', zorder=4)
+            #ax.plot(np.arange(0,thinned_process[i].shape), thinned_process[i], marker=".", alpha=.5,color='black', s=2)
+            ax.tick_params(axis='both', labelsize=7)  # Set tick label size
+            ax.set_xlim(0, xlim)  # Set x-axis limit
+        plt.tight_layout()
+        plt.show()
         
     @no_grad_method
     def plot_generated_data(gp_samples, poisson_process, thinned_process, xlim=1000):
